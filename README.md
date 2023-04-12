@@ -6,6 +6,9 @@
 -----> Please to download and install all dependencies <-----
 (Try to look Yudha17/Backend/package.json to search all dependencies needed)
 
+-----> Make sure in your local development environment you divide which is terminal for Backend and terminal for Frontend <-----
+
+
 This repository is a backend of Yudha17/test-app-frontend repository
 
 First Step 
@@ -28,7 +31,7 @@ Sixth Step
 -> Delete '/*' and '*/' then the syntax will be users.sync();
 
 Seventh Step
--> Open terminal in your local development environment, and type node index.js. It will run your whole backend code
+-> Open terminal in your local development environment, and type 'node index.js' in your backend terminal. It will run your whole backend code
 
 Eighth Step
 -> If the code have run, try to look line of 33 which is users.sync();, then put back '/*' and '*/' in same as before. So the syntax will be /*users.sync();*/
