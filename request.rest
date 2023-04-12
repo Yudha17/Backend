@@ -1,0 +1,35 @@
+GET http://localhost:3001/user
+Authorization: Bearer 
+
+###
+POST http://localhost:3001/register
+Content-Type: application/json
+
+{
+    "full_name" : "qwer",
+    "email" : "qwer@qwer.comcle",
+    "password" : "12345",
+    "confirm_password" : "12345"
+    
+}
+
+###
+POST http://localhost:3001/login
+Content-Type: application/json
+
+{
+    
+    "email" : "zxcv@zxcv.com",
+    "password" : "zxcv1234!Z"
+    
+}
+
+###
+GET http://localhost:3001/accesstoken
+
+###
+DELETE http://localhost:3001/logout
+
+###
+GET http://localhost:3001/listjob
+Authorization: Bearer 

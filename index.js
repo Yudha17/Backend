@@ -1,86 +1,266 @@
-const express = require('express')
-const mysql = require('mysql')
-const cors = require('cors')
+const express = require("express"); 
+const fetch = require("node-fetch");
+const db = require("./database/setup.js");
+const users = require( "./database/userTable.js");
+const bcrypt = require("bcrypt");
+const dotenv = require("dotenv");
+dotenv.config();
 
-const bodyParser = require('body-parser')
-const cookieParser = require('cookie-parser')
-const session = require('express-session')
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
+/*console.log(process.env)*/
 
-const jwt = require('jsonwebtoken')
 
-const app = express()
 
-app.use(express.json());
+const app = express();
+/*app.use(cookieParser());*/
+
+const cors = require('cors');
+const { or } = require("sequelize");
+
 app.use(cors({
     origin: ["http://localhost:3000"],
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "DELETE"],
     credentials: true
 }));
 
-app.use(cookieParser());
-app.use(bodyParser.urlencoded({ extended: true}));
 
-app.use(
-    session({
-        key: "userId",
-        secret: "subscribe",
-        resave: false,
-        saveUninitialized: false,
-        cookie: {
-            expires: 60 * 60 * 24,
-        },
-    })
-);
 
-const db = mysql.createConnection({
-    user: "root",
-    host: "localhost",
-    password: "",
-    database: "danstest2",
-});
+try {
+    db.authenticate();
+    console.log('Database Connected');
+    // it used just one for create the table
+    /*users.sync();*/
+} catch (error) {
+    
+    console.log('Please check your XAMPP Server conneciton !')
+}
 
-app.get("/login", (req, res) => {
-    if(req.session.user){
-        res.send({loggedIn: true, user: req.session.user})
+app.use(express.json())
+app.use(cookieParser())
+
+
+app.post("/listjob", async (req, res) =>{
+
+    let authHeader = req.body.headers.Authorization
+    let token = authHeader.slice(7, 219)
+
+    //console.log(token)
+
+    if (!token) {return res.sendStatus(405)}
+
+    try {
+        // Use REFRESH_TOKEN_SECRET because json appear is refreshToken
+        jwt.verify(token, process.env.REFRESH_TOKEN_SECRET, async (err, decoded) => {
+            if(err){
+                res.sendStatus(402)
+                  
+            } else {
+                const url = `http://dev3.dansmultipro.co.id/api/recruitment/positions.json`
+                const options = {
+                    "method": "GET",
+                }
+
+                const response = await fetch(url, options)
+                    .then(res => res.json())
+                    .catch(e => {
+                        console.error({
+                            "message": "ERROR", error: e,
+                        })
+                    })
+ 
+                //console.log(response.length)
+                res.json(response)
+                //console.log(response)
+            }
+        })
+        
+    } catch (error) {
+        console.log(error)
+        
+    }
+    
+})
+
+app.get("/user", async (req, res) => {
+    
+
+        let authHeader = req.headers['authorization']
+        let token = authHeader && authHeader.split(' ')[1]
+        
+
+        if (!token) {return res.sendStatus(401)}
+
+        try {
+            // Use REFRESH_TOKEN_SECRET because json appear is refreshToken
+            jwt.verify(token, process.env.REFRESH_TOKEN_SECRET, async (err, decoded) => {
+                if(err){
+                    res.sendStatus(401)
+                      
+                } else {
+                    const user = await users.findAll()
+                    res.json(user);
+                }
+            })
+            
+        } catch (error) {
+            console.log(error)
+            
+        }
+})
+
+app.get("/accesstoken", async (req, res) => {
+
+    
+    const accessCookieToken = req.cookies['access-token']
+
+    if(accessCookieToken == null){return res.json({message: " There is no cookies "})}
+
+    let user
+    try {
+        user = await users.findOne({ where: { access_token: accessCookieToken }})
+
+    } catch (error) {
+        console.log(error)
+    }
+
+    
+    try {
+        jwt.verify(accessCookieToken, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+            {
+                const userDatabaseId = user.id
+                const userDatabaseEmail = user.email
+                const userFullName = user.full_name
+                let refreshToken = jwt.sign({id: userDatabaseId, email: userDatabaseEmail, full_name: userFullName }, process.env.REFRESH_TOKEN_SECRET, {expiresIn: "3000" })
+                res.json({refreshToken});
+            }
+        })
+    } catch (error) {
+        console.log(error)
+    }
+    
+})
+
+app.post("/register", async (req, res) => {
+
+        
+            const saltRounds = 10;
+            const bodyName = req.body.full_name
+            const bodyEmail = req.body.email
+            const bodyPassword = req.body.password
+            const bodyConfPassword = req.body.confirm_password
+            
+            let usCr
+            let usFi = users.findOne({where:{
+            email: bodyEmail
+            }})
+                if((await usFi) != null){
+                    res.status(200).json({message: 'Registration Unsuccesfull, Email already exist !',usFi})
+                } else {
+
+                    const hash1 = bcrypt.hashSync(bodyPassword,saltRounds)
+                    const hash2 = bcrypt.hashSync(bodyConfPassword,saltRounds)
+
+                    usCr = users.create({  
+                        full_name: bodyName,
+                        email: bodyEmail,
+                        password: hash1,
+                        confirm_password: hash2
+                    })
+                    
+                    res.status(201).json({message: 'Registration Successfully !'})
+                }
+   
+})
+
+app.post("/login", async (req, res) => {
+
+    const bodyEmail = req.body.email
+    const bodyPassword = req.body.password
+    
+    const searchUser = await users.findOne({ where: { email: bodyEmail }})
+    
+    
+
+    if(searchUser === null){
+        return res.json({message: " User Does Not Exist"})
     } else {
-        res.send({loggedIn: false})
+        bcrypt.compare(bodyPassword, searchUser.password, async (err, result) => {
+        // result == true
+            if(!result){
+                return res.json({message: " Wrong Password "})
+            } else {
+                const authorized = true
+                // create tokens by json web token
+                
+
+                 let accessToken = jwt.sign({email: bodyEmail, id: searchUser.id}, process.env.ACCESS_TOKEN_SECRET, {expiresIn: "20000" })
+                
+                
+              
+                // create tokens by json web token
+              
+                 let refreshToken = jwt.sign({email: bodyEmail, id: searchUser.id}, process.env.REFRESH_TOKEN_SECRET, {expiresIn: "20000"})
+                
+               
+            
+                
+                try {
+                    await users.update({access_token: accessToken} , {
+                        where: {
+                            email: bodyEmail
+                        }
+                    })
+
+    
+                    res.cookie("access-token", accessToken, {
+                        maxAge: 24 * 60 * 60 * 1000,
+                        httpOnly: true
+                    })
+
+                    res.json({refreshToken}) 
+                } catch (error) {
+                    console.log(error)
+                }
+                    
+            }
+                
+        })
     }
 })
 
-app.post("/login", (req, res) => {
-    const username = req.body.username;
-    const password = req.body.password;
+app.delete("/logout", async (req, res) => {
 
-    db.query('SELECT * FROM user WHERE email = ? AND password = ?', 
-        [username, password],
-        (err, result) => {
-        if(err) {
-            res.send({err: err})
-        } 
-        if(result.length > 0){
+    
+    const accessCookieToken = req.cookies['access-token']
 
-            req.session.user = result;
-            console.log(req.session.user);
-            res.send(result);
-              
-        } else {
+    let user
+    try {
+        user = await users.findOne({ where: { access_token: accessCookieToken }})
 
-            res.send({message: 'Invalid Email or Password !'})
-        }
-        
-    });
-});
+    } catch (error) {
+        res.sendStatus(403)
+    }
 
-/*app.get("/insert", (req, res) => {
-    db.query('INSERT INTO user (user_id,email, password) VALUES ("teta002", "bajing@gmail.com", "Qwerhu54321!")', (err, result) => {
-        if(err) {
-            console.log(err);
-        }
+    const userDatabaseId = user.id
+    try {
+        await users.update({access_token: null} , {
+            where: {
+                id: userDatabaseId
+            }
+        })
+    } catch (error) {
+        res.sendStatus(403)
+    }
 
-        res.send(result);
-    });
-});*/
+    res.clearCookie("access-token")
+    res.sendStatus(200)
+})
+
+
+    
 
 app.listen(3001, () => {
     console.log("server running");
-});
+})
+
