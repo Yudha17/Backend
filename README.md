@@ -1,5 +1,11 @@
 # Backend
 
+-----> Please to download and install Node JS <-----
+(Try to look https://nodejs.dev/en/learn/how-to-install-nodejs/ or other way of documentation)
+
+-----> Please to download and install all dependencies <-----
+(Try to look Yudha17/Backend/package.json to search all dependencies needed)
+
 This repository is a backend of Yudha17/test-app-frontend repository
 
 First Step 
@@ -30,3 +36,5 @@ Eighth Step
    
 Nineth Step
 -> Please to continue to try to download Yudha17/test-app-frontend repository for Frontend Code 
+
+
