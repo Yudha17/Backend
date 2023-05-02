@@ -1,5 +1,5 @@
 const express = require("express"); 
-const fetch = require("node-fetch");
+//const fetch = require("node-fetch");
 const db = require("./database/setup.js");
 const users = require( "./database/userTable.js");
 const bcrypt = require("bcrypt");
@@ -56,7 +56,28 @@ app.post("/listjob", async (req, res) =>{
                 res.sendStatus(402)
                   
             } else {
-                const url = `http://dev3.dansmultipro.co.id/api/recruitment/positions.json`
+
+                //using URL
+                /*const url = `http://dev3.dansmultipro.co.id/api/recruitment/positions.json`
+                
+                const options = {
+                    "method": "GET",
+                }
+
+                const response = await fetch(url, options)
+                    .then(res => res.json())
+                    .catch(e => {
+                        console.error({
+                            "message": "ERROR", error: e,
+                        })
+                    })
+ 
+                //console.log(response.length)
+                //res.json(response)
+                //console.log(response)*/
+
+                const url = `http://localhost:3002/list`
+                
                 const options = {
                     "method": "GET",
                 }
@@ -72,6 +93,9 @@ app.post("/listjob", async (req, res) =>{
                 //console.log(response.length)
                 res.json(response)
                 //console.log(response)
+
+                
+                
             }
         })
         
